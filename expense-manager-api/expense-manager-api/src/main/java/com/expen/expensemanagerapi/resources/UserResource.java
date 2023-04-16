@@ -1,7 +1,10 @@
 package com.expen.expensemanagerapi.resources;
 
+import com.expen.expensemanagerapi.Constants;
 import com.expen.expensemanagerapi.domain.User;
 import com.expen.expensemanagerapi.services.UserService;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,11 +30,11 @@ public class UserResource {
 
         // validate the user
         User user = userService.validateUser(email, password);
-
-        Map<String , String> map = new HashMap<>();         // here also generate a JWT token
-        map.put("message", "Logged in successfully");
-
-        return new ResponseEntity<>(map, HttpStatus.OK);
+        if (user == null) {
+            System.out.println("User is null");
+        }
+        Map<String , String> token = generateJWTToken(user);
+        return new ResponseEntity<>(token, HttpStatus.OK);
     }
 
     @PostMapping("/register")
@@ -40,12 +44,29 @@ public class UserResource {
         String email = (String) userMap.get("email");
         String password = (String) userMap.get("password");
 
-//        return firstname + ", " + lastname + ", " + email + ", " + password ;
         User user = userService.registerUser(firstname,lastname, email, password);
+        Map<String , String> token = generateJWTToken(user);
+
+        return new ResponseEntity<>(token, HttpStatus.OK);
+    }
+
+
+    private Map<String, String> generateJWTToken(User user) {
+        long timestamp = System.currentTimeMillis();
+        String token = Jwts.                // generate tokens
+                builder()                   // configure the tokens
+                .signWith(SignatureAlgorithm.HS256, Constants.API_SECRET_KEY)       // Signature Algo
+                .setIssuedAt(new Date(timestamp))
+                .setExpiration(new Date(timestamp + Constants.TOKEN_VALIDITY))
+                .claim("userId", user.getUserId())
+                .claim("email", user.getEmail())
+                .claim("firstName", user.getFirstName())
+                .claim("lastName", user.getLastName())
+                .compact();                 // builds the JWT and serializes it to a compact, URL-safe string
 
         Map<String, String> map = new HashMap<>();
-        map.put("message", "registration successfull");     // send JWT Token from here ?
+        map.put("token", token);
 
-        return new ResponseEntity<>(map, HttpStatus.OK);
+        return map;
     }
 }
