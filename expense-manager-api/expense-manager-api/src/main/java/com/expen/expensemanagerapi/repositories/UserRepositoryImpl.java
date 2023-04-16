@@ -2,7 +2,9 @@ package com.expen.expensemanagerapi.repositories;
 
 import com.expen.expensemanagerapi.domain.User;
 import com.expen.expensemanagerapi.exceptions.EtAuthException;
+import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -36,10 +38,7 @@ public class UserRepositoryImpl implements UserRepository{
     @Override
     public Integer create(String firstName, String lastName, String email, String password) throws EtAuthException {
         try {
-            /*
-            We need update() of jdbc template,
-            To store the generated object we need a GeneratedKeyHolder
-             */
+            String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt(10));
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(connection -> {
                 // this lambda gets connection object as parameter
@@ -47,7 +46,7 @@ public class UserRepositoryImpl implements UserRepository{
                 ps.setString(1, firstName);
                 ps.setString(2, lastName);
                 ps.setString(3, email);
-                ps.setString(4, password);
+                ps.setString(4, hashedPassword);
 
                 return  ps;
             }, keyHolder);
@@ -60,7 +59,16 @@ public class UserRepositoryImpl implements UserRepository{
 
     @Override
     public User findByEmailAndPassword(String email, String password) throws EtAuthException {
-        return null;
+        try {
+            User user = jdbcTemplate.queryForObject(SQL_FIND_BY_EMAIL, new Object[]{email}, userRowMapper);
+            // compare the password
+            if(!BCrypt.checkpw(password, user.getPassword())){
+                throw new EtAuthException("Invalid email/password");
+            }
+            return user;
+        } catch (EmptyResultDataAccessException e){
+            throw new EtAuthException("Invalid username/password");
+        }
     }
 
     @Override
