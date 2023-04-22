@@ -7,7 +7,6 @@ import com.expen.expensemanagerapi.exceptions.EtResourceNotFoundException;
 import java.util.List;
 
 public interface CategoryRepository {
-
     List<Category> findAll(Integer userId) throws EtResourceNotFoundException;
 
     Category findById(Integer userId, Integer categoryId) throws EtResourceNotFoundException;

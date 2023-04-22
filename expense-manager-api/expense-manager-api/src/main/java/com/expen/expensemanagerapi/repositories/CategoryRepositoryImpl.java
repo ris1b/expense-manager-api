@@ -57,8 +57,8 @@ public class CategoryRepositoryImpl implements CategoryRepository {
                 ps.setInt(1, userId);
                 ps.setString(2, title);
                 ps.setString(3, description);
-                return ps;
-            }, keyHolder);
+                return ps;      // returning a prepared statement
+            }, keyHolder);      // generated key values are available in the keyHolder object
             return (Integer) keyHolder.getKeys().get("CATEGORY_ID");
         }catch (Exception e) {
             throw new EtBadRequestException("Invalid request");
